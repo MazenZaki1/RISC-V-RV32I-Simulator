@@ -6,7 +6,7 @@ class registers:
 Registers = {
     "x0": registers("x0"),
     "x1": registers("x1"),
-    "x2": registers("x2"),
+    "x2": registers("x2", 12000),
     "x3": registers("x3"),
     "x4": registers("x4"),
     "x5": registers("x5"),
