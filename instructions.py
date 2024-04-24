@@ -1,7 +1,8 @@
-import registers
+from registers import registers
+from utilities import doesLineContainLabel
 
 class instructions:
-    def __init__(self, name, opcode, funct3, rd=None, rs1=None, rs2=None, funct7=None, immediate=None, type=None, label=None, isLabel=False, commas=-1):
+    def __init__(self, name, opcode, funct3, rd=None, rs1=None, rs2=None, funct7=None, immediate=None, type=None, label=None, isLabel=False):
         self.name = name
         self.opcode = opcode
         self.rd = rd
@@ -13,8 +14,8 @@ class instructions:
         self.type = type
         self.label = label
         self.isLabel = isLabel
-        self.commas = commas
 
+Labels = {} # This dictionary will contain the labels and their corresponding addresses
 Instructions = { #This is the dictionary that contains each insturction
     "LUI": instructions("LUI", 0b0110111, None, type="U"),
     "AUIPC": instructions("AUIPC", 0b0010111, None, type="U"),
@@ -58,32 +59,44 @@ Instructions = { #This is the dictionary that contains each insturction
     "EBREAK": instructions("EBREAK", 0b1110011, 0b000, type="I")
 }
 
+currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+register1 = registers("NA", -1)
+register2 = registers("NA", -1)
 
-def decodeInstruction(instruction_line): # This function will help taking each line in the input file to extract the rd, rs1 and rs2
-    decodedInstructionObject=[]
-    instructionList=instruction_line.strip().replace(" ","").upper().split(",")
-    instructionName=instructionList[0]
-    try:
-        instructionObject=Instructions[instructionName]
-    except KeyError:
-        print(f"Instruction '{instructionName}' not found")
-        return None
+def resetCurrentInstruction():
+    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+
+def decodeInstruction(instruction_line): # This function will help taking each line in the input file to extract the required
     
-    if instructionObject.type=="R": # For example, 'ADD rd, rs1, rs2' which is R-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name # This will be the name of the instruction
-        decodedInstructionObject[1]=instructionList[1] # This will be the rd (destination register)
-        decodedInstructionObject[2]=instructionList[2] # This will be the rs1 (source register 1)
-        decodedInstructionObject[3]=instructionList[3] # This will be the rs2 (source register 2)
-        return decodedInstructionObject
+    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+    instructionList=instruction_line.strip().replace(" ","").upper().split(",") # This will slice the instruction based on the commas
+    currentInstruction.name=instructionList[0]
+
+    #LUI, AUIPC, JAL, JALR
+    if (currentInstruction.name == "JAL"):
+        resetCurrentInstruction()
+        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.label = instructionList[2]
+
+    elif (currentInstruction.name == "JALR"):
+        resetCurrentInstruction()
+        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.rs1 = int(instructionList[2])
+        currentInstruction.immediate = int(instructionList[3])
     
-    elif instructionObject.type=="I": # For example, 'ADDI rd, rs1, imm' which is I-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name
-        decodedInstructionObject[1]=instructionList[1] # This will be the rd
-        decodedInstructionObject[2]=instructionList[2] # This will be the rs1
-        decodedInstructionObject[3]=instructionList[3] # This will be the immediate value
-        return decodedInstructionObject
+    elif  (currentInstruction.name == "BEQ" or currentInstruction.name == "BNE" or currentInstruction.name == "BLT" or 
+        currentInstruction.name == "BGE" or currentInstruction.name == "BLTU" or currentInstruction.name == "BGEU"):
+        resetCurrentInstruction()
+        currentInstruction.rs1 = int(instructionList[1])
+        currentInstruction.rs2 = int(instructionList[2])
+        currentInstruction.label = instructionList[3]
+
+    elif (currentInstruction.name == "LB" or currentInstruction.name == "LH" or currentInstruction.name == "LW" or 
+        currentInstruction.name == "LBU" or currentInstruction.name == "LHU" or currentInstruction.name == "SB"
+        or currentInstruction.name == "SH" or currentInstruction.name == "SW"):
+        resetCurrentInstruction()
+        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.immediate = int(instructionList[2])
     
     elif instructionObject.type=="S": # For example, 'SB rs1, imm(rs2)' which is S-Type
         decodedInstructionObject.clear()
@@ -113,13 +126,11 @@ def decodeInstruction(instruction_line): # This function will help taking each l
         decodedInstructionObject[1]=instructionList[1] # This will be the rd
         decodedInstructionObject[2]=instructionList[2] # This will be the immediate value
         return decodedInstructionObject
-    
     else:
-        print(f"Instruction '{instructionName}' not found")
-        return None
+        pass
     
 
-def executeInstruction(instruction_line, programCounter, Labels):
+def executeInstruction(instruction_line, programCounter):
     decodedInstructionObject = decodeInstruction(instruction_line)
 
     if (decodedInstructionObject[0]=="LUI"):
@@ -139,7 +150,7 @@ def executeInstruction(instruction_line, programCounter, Labels):
             registers.Registers[decodedInstructionObject[1]] = 0
         else:
             registers.Registers[decodedInstructionObject[1]] = programCounter + 4
-            programCounter += decodedInstructionObject[2]
+        programCounter = Labels - 4
     
     if (decodedInstructionObject[0]=="JALR"):
         if (decodedInstructionObject[1] == 0):
