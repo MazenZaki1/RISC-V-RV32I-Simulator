@@ -68,7 +68,7 @@ def resetCurrentInstruction():
 
 def decodeInstruction(instruction_line): # This function will help taking each line in the input file to extract the required
     
-    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+    resetCurrentInstruction()
     instructionList=instruction_line.strip().replace(" ","").upper().split(",") # This will slice the instruction based on the commas
     currentInstruction.name=instructionList[0]
 
@@ -98,34 +98,29 @@ def decodeInstruction(instruction_line): # This function will help taking each l
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.immediate = int(instructionList[2])
     
-    elif instructionObject.type=="S": # For example, 'SB rs1, imm(rs2)' which is S-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name # This will be the name of the instruction
-        decodedInstructionObject[1]=instructionList[1] # This will be the rs1
-        decodedInstructionObject[2]=instructionList[2] # This will be the immediate value
-        return decodedInstructionObject
+    elif (currentInstruction.name == "ADDI" or currentInstruction.name == "SLTI" or currentInstruction.name == "SLTIU" or 
+        currentInstruction.name == "XORI" or currentInstruction.name == "ORI" or currentInstruction.name == "ANDI" or
+        currentInstruction.name == "SLLI" or currentInstruction.name == "SRLI" or currentInstruction.name == "SRAI"):
+        resetCurrentInstruction()
+        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.rs1 = int(instructionList[2])
+        currentInstruction.immediate = int(instructionList[3])
     
-    elif instructionObject.type=="B": # For example, 'BEQ rs1, rs2, imm' which is B-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name # This will be the name of the instruction
-        decodedInstructionObject[1]=instructionList[1] # This will be the rs1
-        decodedInstructionObject[2]=instructionList[2] # This will be the rs2
-        decodedInstructionObject[3]=instructionList[3] # This will be the immediate value
-        return decodedInstructionObject
+    elif (currentInstruction.name == "ADD" or currentInstruction.name == "SUB" or currentInstruction.name == "SLL" or currentInstruction.name == "SLT" or
+        currentInstruction.name == "SLTU" or currentInstruction.name == "XOR" or currentInstruction.name == "SRL" or currentInstruction.name == "SRA" or
+        currentInstruction.name == "OR" or currentInstruction.name == "AND"):
+        resetCurrentInstruction()
+        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.rs1 = int(instructionList[2])
+        currentInstruction.rs2 = int(instructionList[3])
 
-    elif instructionObject.type=="U": # For example, 'LUI rd, imm' which is U-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name # This will be the name of the instruction
-        decodedInstructionObject[1]=instructionList[1] # This will be the rd
-        decodedInstructionObject[2]=instructionList[2] # This will be the immediate value
-        return decodedInstructionObject
+    elif (currentInstruction.name == "FENCE"):
+        resetCurrentInstruction()
+        currentInstruction.name = "FENCE"
     
-    elif instructionObject.type=="J": # For example, 'JAL rd, imm' which is J-Type
-        decodedInstructionObject.clear()
-        decodedInstructionObject[0]=instructionObject.name # This will be the name of the instruction
-        decodedInstructionObject[1]=instructionList[1] # This will be the rd
-        decodedInstructionObject[2]=instructionList[2] # This will be the immediate value
-        return decodedInstructionObject
+    elif (currentInstruction.name == "ECALL" or currentInstruction.name == "EBREAK"): # For example, 'JAL rd, imm' which is J-Type
+        resetCurrentInstruction()
+        currentInstruction.name = instructionList[0]
     else:
         pass
     
