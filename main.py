@@ -1,0 +1,3 @@
+Labels = {}
+stackPointer = {}
+dataMemory = {}
