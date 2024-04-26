@@ -3,3 +3,14 @@ def doesLineContainLabel(instruction_line):
         return True
     else:
         return False
+    
+def binaryToDecimal(binary):
+    decimal = 0
+    power = 1
+    while binary>0:
+        rem = binary%10
+        binary = binary//10
+        decimal += rem*power
+        power = power*2
+        
+    return decimal
