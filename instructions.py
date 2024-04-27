@@ -1,4 +1,4 @@
-from registers import registers
+from registers import registers, Registers
 from utilities import doesLineContainLabel
 from utilities import binaryToDecimal
 
@@ -62,53 +62,60 @@ Instructions = { #This is the dictionary that contains each insturction
 def resetCurrentInstruction(currentInstruction):
     currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
 
-def decodeInstruction(instruction_line):
+def decodeInstruction(instruction_line, currentInstruction, labelsDictionary, instructionAddress):
     
-    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
     resetCurrentInstruction(currentInstruction)
-    instructionList=instruction_line.strip().replace(" ","").upper().split(",")
+    instructionList=instruction_line.strip().replace(",", "").split()
     currentInstruction.name=instructionList[0]
 
+    if (currentInstruction.name == "Starting"):
+        return None
     if (currentInstruction.name == "JAL"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rd = int(instructionList[1])
+        currentInstruction.rd = instructionList[1][1:]
         currentInstruction.label = instructionList[2]
+        return currentInstruction
 
     elif (currentInstruction.name == "JALR"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rd = int(instructionList[1])
-        currentInstruction.rs1 = int(instructionList[2])
-        currentInstruction.immediate = int(instructionList[3])
+        currentInstruction.rd = instructionList[1][1:]
+        currentInstruction.rs1 = instructionList[2][1:]
+        currentInstruction.immediate = instructionList[3]
+        return currentInstruction
     
     elif  (currentInstruction.name == "BEQ" or currentInstruction.name == "BNE" or currentInstruction.name == "BLT" or 
         currentInstruction.name == "BGE" or currentInstruction.name == "BLTU" or currentInstruction.name == "BGEU"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rs1 = int(instructionList[1])
-        currentInstruction.rs2 = int(instructionList[2])
+        currentInstruction.rs1 = instructionList[1][1:]
+        currentInstruction.rs2 = instructionList[2][1:]
         currentInstruction.label = instructionList[3]
+        return currentInstruction
 
     elif (currentInstruction.name == "LB" or currentInstruction.name == "LH" or currentInstruction.name == "LW" or 
         currentInstruction.name == "LBU" or currentInstruction.name == "LHU" or currentInstruction.name == "SB"
         or currentInstruction.name == "SH" or currentInstruction.name == "SW"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rd = int(instructionList[1])
-        currentInstruction.immediate = int(instructionList[2])
+        currentInstruction.rd = instructionList[1][1:]
+        currentInstruction.immediate = instructionList[2]
+        return currentInstruction
     
     elif (currentInstruction.name == "ADDI" or currentInstruction.name == "SLTI" or currentInstruction.name == "SLTIU" or 
         currentInstruction.name == "XORI" or currentInstruction.name == "ORI" or currentInstruction.name == "ANDI" or
         currentInstruction.name == "SLLI" or currentInstruction.name == "SRLI" or currentInstruction.name == "SRAI"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rd = int(instructionList[1])
-        currentInstruction.rs1 = int(instructionList[2])
-        currentInstruction.immediate = int(instructionList[3])
+        currentInstruction.rd = instructionList[1][1:]
+        currentInstruction.rs1 = instructionList[2][1:]
+        currentInstruction.immediate = instructionList[3]
+        return currentInstruction
     
     elif (currentInstruction.name == "ADD" or currentInstruction.name == "SUB" or currentInstruction.name == "SLL" or currentInstruction.name == "SLT" or
         currentInstruction.name == "SLTU" or currentInstruction.name == "XOR" or currentInstruction.name == "SRL" or currentInstruction.name == "SRA" or
         currentInstruction.name == "OR" or currentInstruction.name == "AND"):
         resetCurrentInstruction(currentInstruction)
-        currentInstruction.rd = int(instructionList[1])
-        currentInstruction.rs1 = int(instructionList[2])
-        currentInstruction.rs2 = int(instructionList[3])
+        currentInstruction.rd = instructionList[1][1:]
+        currentInstruction.rs1 = instructionList[2][1:]
+        currentInstruction.rs2 = instructionList[3][1:]
+        return currentInstruction
 
     elif (currentInstruction.name == "FENCE"):
         resetCurrentInstruction(currentInstruction)
@@ -118,8 +125,9 @@ def decodeInstruction(instruction_line):
         resetCurrentInstruction(currentInstruction)
         currentInstruction.name = instructionList[0]
     else:
-        pass
-    
+        doesLineContainLabel(currentInstruction.name)
+        currentInstruction.isLabel = True
+        labelsDictionary[currentInstruction.name] = instructionAddress
 
 def executeInstruction(currentInstruction, labelsDictionary, stackPointerDictionary, dataMemoryDictionary, programCounter):
     if (currentInstruction.name == "LUI"):
@@ -330,7 +338,7 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
                     stackPointerDictionary[registers[2]+size].dat_val = "00000000"
                     size -= 1
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] + currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value + int(currentInstruction.immediate)
     
     if (currentInstruction.name=="SLTI"):
         if (currentInstruction.rd == 0):
@@ -390,7 +398,8 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] + registers[currentInstruction.rs2]
+            print(Registers[currentInstruction.rd].value)
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value + Registers[currentInstruction.rs2].value
 
     if (currentInstruction.name=="SUB"):
         if (currentInstruction.rd == 0):
@@ -450,7 +459,7 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] & registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value & Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="FENCE"):
         exit(0)
@@ -460,7 +469,3 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
 
     if (currentInstruction.name=="EBREAK"):
         exit(0)
-
-line = "ADDI x1, x0, 10" #output: 10
-
-decodeInstruction(line)
