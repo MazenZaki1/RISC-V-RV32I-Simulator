@@ -1,0 +1,4 @@
+Starting Address: 00400000
+ADDI x1, x0, 5
+ADDI x2, x1, 10
+ADD x3, x1, x2

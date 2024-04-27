@@ -12,5 +12,15 @@ def binaryToDecimal(binary):
         binary = binary//10
         decimal += rem*power
         power = power*2
-        
+
     return decimal
+
+def readStartingAddress(fileName):
+    file = open(fileName, 'r')
+    startingAddress = file.readline()
+    startingAddress = startingAddress.replace(" ", "")
+    startingAddress = startingAddress[16:]
+    return startingAddress
+
+
+       

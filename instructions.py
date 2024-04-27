@@ -59,34 +59,30 @@ Instructions = { #This is the dictionary that contains each insturction
     "EBREAK": instructions("EBREAK", 0b1110011, 0b000, type="I")
 }
 
-object = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
-register1 = registers("NA", -1)
-register2 = registers("NA", -1)
-
 def resetCurrentInstruction(currentInstruction):
-    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
 
-def decodeInstruction(instruction_line, currentInstruction): # This function will help taking each line in the input file to extract the required
+def decodeInstruction(instruction_line):
     
-    resetCurrentInstruction()
-    instructionList=instruction_line.strip().replace(" ","").upper().split(",") # This will slice the instruction based on the commas
+    currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+    resetCurrentInstruction(currentInstruction)
+    instructionList=instruction_line.strip().replace(" ","").upper().split(",")
     currentInstruction.name=instructionList[0]
 
-    #LUI, AUIPC, JAL, JALR
     if (currentInstruction.name == "JAL"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.label = instructionList[2]
 
     elif (currentInstruction.name == "JALR"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.rs1 = int(instructionList[2])
         currentInstruction.immediate = int(instructionList[3])
     
     elif  (currentInstruction.name == "BEQ" or currentInstruction.name == "BNE" or currentInstruction.name == "BLT" or 
         currentInstruction.name == "BGE" or currentInstruction.name == "BLTU" or currentInstruction.name == "BGEU"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rs1 = int(instructionList[1])
         currentInstruction.rs2 = int(instructionList[2])
         currentInstruction.label = instructionList[3]
@@ -94,14 +90,14 @@ def decodeInstruction(instruction_line, currentInstruction): # This function wil
     elif (currentInstruction.name == "LB" or currentInstruction.name == "LH" or currentInstruction.name == "LW" or 
         currentInstruction.name == "LBU" or currentInstruction.name == "LHU" or currentInstruction.name == "SB"
         or currentInstruction.name == "SH" or currentInstruction.name == "SW"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.immediate = int(instructionList[2])
     
     elif (currentInstruction.name == "ADDI" or currentInstruction.name == "SLTI" or currentInstruction.name == "SLTIU" or 
         currentInstruction.name == "XORI" or currentInstruction.name == "ORI" or currentInstruction.name == "ANDI" or
         currentInstruction.name == "SLLI" or currentInstruction.name == "SRLI" or currentInstruction.name == "SRAI"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.rs1 = int(instructionList[2])
         currentInstruction.immediate = int(instructionList[3])
@@ -109,17 +105,17 @@ def decodeInstruction(instruction_line, currentInstruction): # This function wil
     elif (currentInstruction.name == "ADD" or currentInstruction.name == "SUB" or currentInstruction.name == "SLL" or currentInstruction.name == "SLT" or
         currentInstruction.name == "SLTU" or currentInstruction.name == "XOR" or currentInstruction.name == "SRL" or currentInstruction.name == "SRA" or
         currentInstruction.name == "OR" or currentInstruction.name == "AND"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = int(instructionList[1])
         currentInstruction.rs1 = int(instructionList[2])
         currentInstruction.rs2 = int(instructionList[3])
 
     elif (currentInstruction.name == "FENCE"):
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.name = "FENCE"
     
     elif (currentInstruction.name == "ECALL" or currentInstruction.name == "EBREAK"): # For example, 'JAL rd, imm' which is J-Type
-        resetCurrentInstruction()
+        resetCurrentInstruction(currentInstruction)
         currentInstruction.name = instructionList[0]
     else:
         pass
@@ -464,3 +460,7 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
 
     if (currentInstruction.name=="EBREAK"):
         exit(0)
+
+line = "ADDI x1, x0, 10" #output: 10
+
+decodeInstruction(line)
