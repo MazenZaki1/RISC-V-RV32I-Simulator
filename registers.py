@@ -4,7 +4,7 @@ class registers:
         self.value = value
 
 Registers = {
-    "0": registers("x0"),
+    "0": registers("x0", 0),
     "1": registers("x1"),
     "2": registers("x2", 1),
     "3": registers("x3"),
@@ -37,9 +37,3 @@ Registers = {
     "30": registers("x30"),
     "31": registers("x31")
 }
-
-def getRegisterInfo(register):
-    if register in Registers:
-        return f"{Registers[register].name}, {Registers[register].value}"
-    else:
-        return "Register not defined"

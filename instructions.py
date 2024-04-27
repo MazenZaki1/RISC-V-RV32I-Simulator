@@ -1,9 +1,11 @@
 from registers import registers, Registers
-from utilities import doesLineContainLabel
-from utilities import binaryToDecimal
+from utilities import doesLineContainLabel, binaryToDecimal, outputRegisters
+#import sys
+#sys.path.append(r 'C:\Users\nourt\OneDrive\Documents\Desktop')
+
 
 class instructions:
-    def __init__(self, name, opcode, funct3, rd=None, rs1=None, rs2=None, funct7=None, immediate=None, type=None, label=None, isLabel=False):
+    def __init__(self, name, opcode, funct3, rd=None, rs1=None, rs2=None, funct7=None, immediate=0, type=None, label=None, isLabel=False):
         self.name = name
         self.opcode = opcode
         self.rd = rd
@@ -65,11 +67,14 @@ def resetCurrentInstruction(currentInstruction):
 def decodeInstruction(instruction_line, currentInstruction, labelsDictionary, instructionAddress):
     
     resetCurrentInstruction(currentInstruction)
-    instructionList=instruction_line.strip().replace(",", "").split()
+    print(f"The instruction line is: {instruction_line}")
+    if (instruction_line == "\n" or instruction_line == "" or instruction_line == " "):
+        return None
+    instructionList=instruction_line.strip().upper().replace(",", "").split()
+    print(f"The instruction list is: {instructionList}")
     currentInstruction.name=instructionList[0]
 
-    if (currentInstruction.name == "Starting"):
-        return None
+
     if (currentInstruction.name == "JAL"):
         resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = instructionList[1][1:]
@@ -96,7 +101,9 @@ def decodeInstruction(instruction_line, currentInstruction, labelsDictionary, in
         or currentInstruction.name == "SH" or currentInstruction.name == "SW"):
         resetCurrentInstruction(currentInstruction)
         currentInstruction.rd = instructionList[1][1:]
-        currentInstruction.immediate = instructionList[2]
+        findBracket = instructionList[2].find("(")
+        currentInstruction.immediate = int(instructionList[2][:findBracket])
+        currentInstruction.rs1 = instructionList[2][findBracket+2:-1]
         return currentInstruction
     
     elif (currentInstruction.name == "ADDI" or currentInstruction.name == "SLTI" or currentInstruction.name == "SLTIU" or 
@@ -124,218 +131,141 @@ def decodeInstruction(instruction_line, currentInstruction, labelsDictionary, in
     elif (currentInstruction.name == "ECALL" or currentInstruction.name == "EBREAK"): # For example, 'JAL rd, imm' which is J-Type
         resetCurrentInstruction(currentInstruction)
         currentInstruction.name = instructionList[0]
-    else:
-        doesLineContainLabel(currentInstruction.name)
+    elif (doesLineContainLabel(currentInstruction.name)):
         currentInstruction.isLabel = True
         labelsDictionary[currentInstruction.name] = instructionAddress
 
-def executeInstruction(currentInstruction, labelsDictionary, stackPointerDictionary, dataMemoryDictionary, programCounter):
+def executeInstruction(currentInstruction, labelsDictionary, stackPointerDictionary, programCounter):
     if (currentInstruction.name == "LUI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers.Registers[currentInstruction.rd] = currentInstruction.imm << 12
+            Registers[currentInstruction.rd].value = currentInstruction.immediate << 12
 
     if (currentInstruction.name == "AUIPC"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers.Registers[currentInstruction.rd] = (registers.Registers[currentInstruction.imm] << 12) + programCounter
+            Registers[currentInstruction.rd].value = (Registers[currentInstruction.immediate].value << 12) + programCounter
 
     if (currentInstruction.name == "JAL"):
         if (currentInstruction.rd == 0):
-            registers.Registers[currentInstruction.rd] = 0
+            Registers[currentInstruction.rd].value = 0
         else:
-            registers.Registers[currentInstruction.rd] = programCounter + 4
+            Registers[currentInstruction.rd].value = programCounter + 4
         programCounter = labelsDictionary[currentInstruction.label] - 4
     
     if (currentInstruction.name=="JALR"):
         if (currentInstruction.rd == 0):
-            registers.Registers[currentInstruction.rd] = 0
+            Registers[currentInstruction.rd].value = 0
         else:
-            registers.Registers[currentInstruction.rd] = currentInstruction.imm + registers.Registers[currentInstruction.rs1]
-        programCounter = currentInstruction.imm + registers.Registers[currentInstruction.rs1] - 4
+            Registers[currentInstruction.rd] = currentInstruction.immediate + Registers[currentInstruction.rs1].value
+        programCounter = currentInstruction.immediate + Registers[currentInstruction.rs1].value - 4
 
     if (currentInstruction.name=="BEQ"):
-        if (registers.Registers[currentInstruction.rs1] == registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value == Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
 
     if (currentInstruction.name=="BNE"):
-        if (registers.Registers[currentInstruction.rs1] != registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value != Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
 
     if (currentInstruction.name=="BLT"):
-        if (registers.Registers[currentInstruction.rs1] < registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value < Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
 
     if (currentInstruction.name=="BGE"):
-        if (registers.Registers[currentInstruction.rs1] >= registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value >= Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
     
     if (currentInstruction.name=="BLTU"):
-        if (registers.Registers[currentInstruction.rs1] < registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value < Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
 
     if (currentInstruction.name=="BGEU"):
-        if (registers.Registers[currentInstruction.rs1] >= registers.Registers[currentInstruction.rs2]):
+        if (Registers[currentInstruction.rs1].value >= Registers[currentInstruction.rs2].value):
             programCounter = labelsDictionary[currentInstruction.label] - 4
     
     if (currentInstruction.name=="LB"):
         if (currentInstruction.rd == 0):
             return
-        elif (currentInstruction.rs1) == 2:
-            stack = registers[2] + currentInstruction.imm
-            value = "00000000"
-            newValue = ""
-            value = stackPointerDictionary[stack].dat_val[:8]
-            if value[0] == '0':
-                newValue = "000000000000000000000000"
-                newValue += value  
-            elif value[0] == '1':
-                newValue = "111111111111111111111111"
-                newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(newValue)
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = "00000000"
-            newValue = ""
-            value = dataMemoryDictionary[startAddress].dat_val[:8]
-            if value[0] == '0':
-                newValue = "000000000000000000000000"
-                newValue += value
-            elif value[0] == '1':
-                newValue = "111111111111111111111111"
-                newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(newValue)
+            Registers[currentInstruction.rd].value = currentInstruction.immediate + Registers[currentInstruction.rs1].value
     
     if (currentInstruction.name=="LH"):
         if (currentInstruction.rd == 0):
             return
-        elif (currentInstruction.rs1) == 2:
-            stack = registers[2] + currentInstruction.imm
-            value = "0000000000000000"
-            newValue = ""
-            value = stackPointerDictionary[stack].dat_val[:16]
-            if value[0] == '0':
-                newValue = "0000000000000000"
-                newValue += value
-            elif value[0] == '1':
-                newValue = "1111111111111111"
-                newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(newValue)
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = "00000000"
-            newValue = ""
-            value = dataMemoryDictionary[startAddress].dat_val[:16]
-            if value[0] == '0':
-                newValue = "0000000000000000"
-                newValue += value
-            elif value[0] == '1':
-                newValue = "1111111111111111"
-                newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(newValue)
+           Registers[currentInstruction.rd].value = currentInstruction.immediate + Registers[currentInstruction.rs1].value
 
     if (currentInstruction.name=="LW"):
         if (currentInstruction.rd == 0):
             return
-        elif (currentInstruction.rs1) == 2:
-            stack = registers[2] + currentInstruction.imm
-            value = "00000000000000000000000000000000"
-            value = stackPointerDictionary[stack].dat_val[:32]
-            registers[currentInstruction.rd] = binaryToDecimal(value)
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = "00000000000000000000000000000000"
-            value = dataMemoryDictionary[startAddress].dat_val[:32]
-            registers[currentInstruction.rd] = binaryToDecimal(value)
+            Registers[currentInstruction.rd].value = currentInstruction.immediate + Registers[currentInstruction.rs1].value
 
     if (currentInstruction.name=="LBU"):
         if (currentInstruction.rd == 0):
             return
-        elif (currentInstruction.rs1) == 2:
-            stack = registers[2] + currentInstruction.imm
-            value = "00000000"
-            value = stackPointerDictionary[stack].dat_val[:8]
-            newValue = "000000000000000000000000"
-            newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(value)
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = "00000000"
-            value = dataMemoryDictionary[startAddress].dat_val[:8]
-            newValue = "000000000000000000000000"
-            newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(value)
+            Registers[currentInstruction.rd].value = currentInstruction.immediate + Registers[currentInstruction.rs1].value
     
     if (currentInstruction.name=="LHU"):
         if (currentInstruction.rd == 0):
             return
-        elif (currentInstruction.rs1) == 2:
-            stack = registers[2] + currentInstruction.imm
-            value = "0000000000000000"
-            value = stackPointerDictionary[stack].dat_val[:16]
-            newValue = "000000000000000000000000"
-            newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(value)
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = "0000000000000000"
-            value = dataMemoryDictionary[startAddress].dat_val[:16]
-            newValue = "000000000000000000000000"
-            newValue += value
-            registers[currentInstruction.rd] = binaryToDecimal(value)
-    
+            Registers[currentInstruction.rd].value = currentInstruction.immediate + Registers[currentInstruction.rs1].value
+    """
     if (currentInstruction.name=="SB"):
         if (currentInstruction.rs1 == 2):
-            stack = registers[2] + currentInstruction.imm
-            value = bin(registers[currentInstruction.rd])[2:]
+            stack = Registers[2].value + currentInstruction.immediate
+            value = bin(Registers[currentInstruction.rd].value)[2:]
             stackPointerDictionary[stack].dat_val = value
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = bin(registers[currentInstruction.rd])[2:]
-            dataMemoryDictionary[startAddress].dat_val = registers[currentInstruction.rd]
+            startAddress = currentInstruction.immediate + Registers[currentInstruction.rs1].value
+            value = bin(Registers[currentInstruction.rd].value)[2:]
+            dataMemoryDictionary[startAddress].dat_val = Registers[currentInstruction.rd].value
     
     if (currentInstruction.name=="SH"):
         if (currentInstruction.rs1 == 2):
-            stack = registers[2] + currentInstruction.imm
-            value = bin(registers[currentInstruction.rd])[2:]
+            stack = Registers[2].value + currentInstruction.immediate
+            value = bin(Registers[currentInstruction.rd].value)[2:]
             stackPointerDictionary[stack].dat_val = value
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = bin(registers[currentInstruction.rd])[2:]
+            startAddress = currentInstruction.immediate + Registers[currentInstruction.rs1].value
+            value = bin(Registers[currentInstruction.rd].value)[2:]
             dataMemoryDictionary[startAddress].dat_val = value[8:]
             dataMemoryDictionary[startAddress+1].dat_val = value[:8]
     
     if (currentInstruction.name=="SW"):
         if (currentInstruction.rs1 == 2):
-            stack = registers[2] + currentInstruction.imm
-            value = bin(registers[currentInstruction.rd])[:32]
+            stack = Registers[2].value + currentInstruction.immediate
+            value = bin(Registers[currentInstruction.rd].value)[:32]
             stackPointerDictionary[stack+3].dat_val = value[:8]
             stackPointerDictionary[stack+2].dat_val = value[8:8]
             stackPointerDictionary[stack+1].dat_val = value[16:8]
             stackPointerDictionary[stack].dat_val = value[24:8]
         else:
-            startAddress = currentInstruction.imm + registers[currentInstruction.rs1]
-            value = bin(registers[currentInstruction.rd])[:32]
+            startAddress = currentInstruction.immediate + Registers[currentInstruction.rs1].value
+            value = bin(Registers[currentInstruction.rd].value)[:32]
             dataMemoryDictionary[startAddress].dat_val = value[24:8]
             dataMemoryDictionary[startAddress+1].dat_val = value[16:8]
             dataMemoryDictionary[startAddress+2].dat_val = value[8:8]
             dataMemoryDictionary[startAddress+3].dat_val = value[:8]
-    
+    """
     if (currentInstruction.name=="ADDI"):
         if (currentInstruction.rd == 0):
             return
         elif (currentInstruction.rd == 2 and currentInstruction.rs1 == 2):
-            size = currentInstruction.imm
+            size = currentInstruction.immediate
             if (size < 0):
                 while (size != 0):
-                    stackPointerDictionary[registers[2]+size].dat_val = "00000000"
+                    stackPointerDictionary[Registers[2].value+size].dat_val = "00000000"
                     size += 1
             if (size > 0):
                 size = size * -1
                 while (size != 0):
-                    stackPointerDictionary[registers[2]+size].dat_val = "00000000"
+                    stackPointerDictionary[Registers[2].value+size].dat_val = "00000000"
                     size -= 1
         else:
             Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value + int(currentInstruction.immediate)
@@ -344,55 +274,55 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
         if (currentInstruction.rd == 0):
             return
         else:
-            if (registers[currentInstruction.rs1] < currentInstruction.imm):
-                registers[currentInstruction.rd] = 1
+            if (Registers[currentInstruction.rs1].value < currentInstruction.immediate):
+                Registers[currentInstruction.rd].value = 1
             else:
-                registers[currentInstruction.rd] = 0
+                Registers[currentInstruction.rd].value = 0
     
     if (currentInstruction.name=="SLTIU"):
         if (currentInstruction.rd == 0):
             return
         else:
-            if (registers[currentInstruction.rs1] < currentInstruction.imm):
-                registers[currentInstruction.rd] = 1
+            if (Registers[currentInstruction.rs1].value < currentInstruction.immediate):
+                Registers[currentInstruction.rd].value = 1
             else:
-                registers[currentInstruction.rd] = 0
+                Registers[currentInstruction.rd].value = 0
     
     if (currentInstruction.name=="XORI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] ^ currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value ^ currentInstruction.immediate
     
     if (currentInstruction.name=="ORI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] | currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value | currentInstruction.immediate
     
     if (currentInstruction.name=="ANDI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] & currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value & currentInstruction.immediate
 
     if (currentInstruction.name=="SLLI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] << currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value << currentInstruction.immediate
     
     if (currentInstruction.name=="SRLI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] >> currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value >> currentInstruction.immediate
     
     if (currentInstruction.name=="SRAI"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] >> currentInstruction.imm
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value >> currentInstruction.immediate
     
     if (currentInstruction.name=="ADD"):
         if (currentInstruction.rd == 0):
@@ -405,55 +335,55 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] - registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value - Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="SLL"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] << registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value << Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="SLT"):
         if (currentInstruction.rd == 0):
             return
         else:
-            if (registers[currentInstruction.rs1] < registers[currentInstruction.rs2]):
-                registers[currentInstruction.rd] = 1
+            if (Registers[currentInstruction.rs1].value < Registers[currentInstruction.rs2].value):
+                Registers[currentInstruction.rd].value = 1
             else:
-                registers[currentInstruction.rd] = 0
+                Registers[currentInstruction.rd].value = 0
     
     if (currentInstruction.name=="SLTU"):
         if (currentInstruction.rd == 0):
             return
         else:
-            if (registers[currentInstruction.rs1] < registers[currentInstruction.rs2]):
-                registers[currentInstruction.rd] = 1
+            if (Registers[currentInstruction.rs1].value < Registers[currentInstruction.rs2].value):
+                Registers[currentInstruction.rd].value = 1
             else:
-                registers[currentInstruction.rd] = 0
+                Registers[currentInstruction.rd].value = 0
     
     if (currentInstruction.name=="XOR"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] ^ registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value ^ Registers[currentInstruction.rs2].value
 
     if (currentInstruction.name=="SRL"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] >> registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value >> Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="SRA"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] >> registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value >> Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="OR"):
         if (currentInstruction.rd == 0):
             return
         else:
-            registers[currentInstruction.rd] = registers[currentInstruction.rs1] | registers[currentInstruction.rs2]
+            Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value | Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="AND"):
         if (currentInstruction.rd == 0):
@@ -462,10 +392,13 @@ def executeInstruction(currentInstruction, labelsDictionary, stackPointerDiction
             Registers[currentInstruction.rd].value = Registers[currentInstruction.rs1].value & Registers[currentInstruction.rs2].value
     
     if (currentInstruction.name=="FENCE"):
+        outputRegisters(programCounter)
         exit(0)
     
     if (currentInstruction.name=="ECALL"):
+        outputRegisters(programCounter)
         exit(0)
 
     if (currentInstruction.name=="EBREAK"):
+        outputRegisters(programCounter)
         exit(0)

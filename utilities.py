@@ -1,5 +1,7 @@
+from registers import Registers
+
 def doesLineContainLabel(instruction_line):
-    if (instruction_line.find(":") != -1):
+    if (instruction_line.find(":")):
         return True
     else:
         return False
@@ -22,5 +24,9 @@ def readStartingAddress(fileName):
     startingAddress = startingAddress[16:]
     return startingAddress
 
-
-       
+def outputRegisters(programCounter):
+    print("Program has finished running. Here are the final register values:")
+    print(f"Program Counter: {programCounter}")
+    print("Name   Decimal Value     Binary Value      Hex Value")
+    for register in Registers:
+        print(f"{Registers[register].name}            {Registers[register].value}              {bin(Registers[register].value)}              {hex(Registers[register].value)}")
