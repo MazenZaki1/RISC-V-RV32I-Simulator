@@ -6,18 +6,29 @@ Labels = {}
 stackPointer = {}
 dataMemory = {}
 
-currentInstruction = instructions("N/A", -1, -1, -1, -1, -1, -1, -1, -1, -1, False)
+currentInstruction = instructions("N/A", -1, -2, -1, -1, -1, -1, -1, -1, -1, False)
 startingAddress = readStartingAddress('input.txt')
 programCounter = int(startingAddress)
 
 with open('input.txt', 'r') as instructionFile:
+    next(instructionFile)
     for instructionLine in instructionFile:
-        decodeInstruction(instructionLine)
+        decodeInstruction(instructionLine, currentInstruction, Labels, programCounter)
+        #print(f"Instruction: {currentInstruction.name}")
+        #print(f"RD: {currentInstruction.rd}")
+        #print(f"RS1: {currentInstruction.rs1}")
+        #print(f"RS2: {currentInstruction.rs2}")
+        #print(f"IMM: {currentInstruction.immediate}")
         executeInstruction(currentInstruction, Labels, stackPointer, dataMemory, programCounter)
         programCounter += 4
+
     
-    for reg_name, reg_obj in Registers.items():
-        print(f"Register {reg_name}:")
-        print(f"Name: {reg_obj.name}")
-        print(f"Value: {reg_obj.value}")
-        print()
+    # Assuming you've already defined the Registers dictionary as shown in your code snippet
+
+# ...
+
+for i in range(32):
+    if str(i) in Registers:
+        print(f"{i}: {Registers[str(i)].name}, {Registers[str(i)].value}")
+    else:
+        print(f"{i}: Register not defined")
