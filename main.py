@@ -22,11 +22,6 @@ with open('input.txt', 'r') as instructionFile:
         executeInstruction(currentInstruction, Labels, stackPointer, dataMemory, programCounter)
         programCounter += 4
 
-    
-    # Assuming you've already defined the Registers dictionary as shown in your code snippet
-
-# ...
-
 for i in range(32):
     if str(i) in Registers:
         print(f"{i}: {Registers[str(i)].name}, {Registers[str(i)].value}")
